@@ -1,4 +1,5 @@
 <?
+require_once('class.DB.php');
 
 $sql = 'CREATE DATABASE IF NOT EXISTS oasis_nerdnite';
 DB::update($sql);
