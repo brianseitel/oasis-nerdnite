@@ -16,7 +16,7 @@ class DB {
 	protected $db;
 
 	public static function connect() {
-		return new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+		return new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME, DB_PORT);
 	}
 
 	public static function clean_string($string) {
