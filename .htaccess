@@ -1,0 +1,8 @@
+Options -Indexes
+DirectoryIndex index.php
+RewriteBase /
+RewriteEngine on 
+AddType application/x-xpinstall .xpi
+# -----------------------------------------------------------
+RewriteRule ^(/)?$ api.php
+RewriteRule ^scrape(/)?# scrape.php
