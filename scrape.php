@@ -9,6 +9,11 @@
 
 require('class.DB.php');
 
+/**
+ * Get the date! Accepts days of the week, months, and dates, e.g., Tuesday, March 13
+ * @param String $content 
+ * @return The date found - false if none
+ */
 function get_date($content) {
 	$pattern = '/(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)([, ]+)(\d|January|February|March|April|May|June|July|August|September|October|November|December)(\/*)( *)(\d*)/i';
 	preg_match($pattern, $content, $matches);
@@ -19,6 +24,11 @@ function get_date($content) {
 	return false;
 }
 
+/**
+ * Get the ticket link. It basically grabs any link that has the word "ticket" in it. Not very elegant, I know..
+ * @param String $content - HTML of the page we grabbed 
+ * @return the link URL. False if none found.
+ */
 function get_ticket_link($content) {
 	$pattern = '/a href="(.+(ticket).+)"\s/i';
 	preg_match($pattern, $content, $matches);
@@ -29,6 +39,14 @@ function get_ticket_link($content) {
 	return false;
 }
 
+/**
+ * Get the time! Patterns it will grab:
+ *	7pm
+ *	7 pm
+ *	7:30pm
+ *	7:30 pm
+ *	7:30
+ **/
 function get_time($content) {
 	$pattern = '/((\d{1,2})pm|(\d{1,2}) pm|(\d{1,2}:\d{2})pm|(\d{1,2}:\d{2}) pm|(\d{1,2}:\d{2}))/i';
 	preg_match($pattern, $content, $matches);
@@ -39,14 +57,33 @@ function get_time($content) {
 	return false;
 }
 
+/**
+ * Get all the topics! _o/
+ * @param String $content - the HTML of the page we just scraped 
+ * @return Array of matches -- false is none
+ */
 function get_topics($content) {
+
+	// Limit the content to just stuff inside body tags. Don't want scripts screwing up the regexes
 	$content = array_pop(explode('<body>', $content));
+
+	// Strip out tags. We don't care
 	$content = strip_tags($content);
+
+	// Replace "smart" or "curly" quotes with straight, normal, dumb quotes
 	$content = preg_replace('/“|”|&#8220;|&#8221;/', '"', $content);
 	$content = preg_replace('/’|&#8217;/', "'", $content);
+
+	// Remove commas
 	$content = str_replace(',', '', $content);
+
+	// There was a typo in the SF Nerd Nite where there was no space between the " and by
 	$content = str_replace('"by', '" by', $content);
-	// Get a pattern like:  "Some topic" by Joe Schmoe
+
+	/**
+	 * Let's find some shit!
+	 **/
+	// "Some topic" by Joe Schmoe
 	$pattern = '/"(.+)"(\W|\r|\n|[:&!?])+by\s+(.+\S){1,2}/i';
 	preg_match_all($pattern, $content, $matches);
 
@@ -54,7 +91,7 @@ function get_topics($content) {
 	if (count($matches))
 		return $matches[0];
 
-	// Get a pattern like: #1: Using data to change the world
+	// #1: Using data to change the world
 	$pattern = '/#\d{1}[.:-](.+)(\r|\n)/i';
 	preg_match_all($pattern, $content, $matches);
 
@@ -62,25 +99,7 @@ function get_topics($content) {
 	if (count($matches))
 		return $matches[0];
 
-
 	return false;
-}
-
-function convert_smart_quotes($string) {
-	$search = array(chr(145),
-	chr(146),
-	chr(147),
-	chr(148),
-	chr(151));
-
-	$replace = array("'",
-	"'",
-	'"',
-	'"',
-	'-');
-
-	$string = str_replace($search, $replace, $string, $count);
-	return $string;
 }
 
 if (array_key_exists('site', $_GET)) {
@@ -89,11 +108,15 @@ if (array_key_exists('site', $_GET)) {
 	$sites = array('austin', 'eastbay', 'sf', 'amsterdam', 'auckland', 'berlin', 'boston', 'brighton', 'chicago', 'dc', 'detroit', 'duluth', 'edmonton','honolulu','ithaca','kansascity', 'la', 'nola', 'nyc', 'orlando', 'philadelphia', 'phoenix', 'portland', 'sandiego', 'seattle', 'toronto');
 }
 
+// Connect to DB
 $db = DB::connect();
+
+// Loop through each site, scrape it, and throw data in to the DB
 $site_data = array();
 foreach ($sites as $site) {
 	$url = 'http://'.$site.'.nerdnite.com';
 
+	// Fetch the website, Watson!
 	$ch = curl_init($url);
 	curl_setopt($ch, CURLOPT_FOLLOWLOCATION , 1); // TRUE
 	curl_setopt($ch, CURLOPT_HEADER ,0); // DO NOT RETURN HTTP HEADERS
@@ -103,6 +126,9 @@ foreach ($sites as $site) {
 	$data = strtolower($data);
 	$content = $data;
 
+	/**
+	 * Find data, if possible
+	 **/
 	if ($date = get_date($content))
 		$site_data[$site]['date'] = $date;
 
@@ -116,6 +142,9 @@ foreach ($sites as $site) {
 		$site_data[$site]['topics'] = $topics;
 	}
 
+	/**
+	 * Clean up the data and insert it into the DB
+	 **/
 	$data = $site_data[$site];
 	$city = $site;
 	$event_date = date('Y-m-d ', strtotime($data['date'])).' '.$data['time'];
