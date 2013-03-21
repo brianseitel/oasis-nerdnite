@@ -1,5 +1,5 @@
 <?
-
+require_once('../nerdnitepass.php');
 function pp($data) {
 	echo "<pre>";
 	print_r($data);
@@ -16,7 +16,7 @@ class DB {
 	protected $db;
 
 	public static function connect() {
-		return new mysqli("127.0.0.1", "root", "", "oasis_nerdnite");
+		return new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 	}
 
 	public static function clean_string($string) {
